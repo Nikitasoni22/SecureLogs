@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SecureLog Demo</title>
+<style>
+:root{
+  --bg:#0f1419; --panel:#171e26; --panel2:#1d2630; --line:#2a3541; --text:#dbe4ee; --mute:#8497a9;
+  --ok:#3fb37f; --bad:#f0616d; --warn:#e5a93d; --acc:#4da3ff; --ct:#c792ea; --tag:#e5a93d; --hash:#5fd0c7;
+}
+@media (prefers-color-scheme: light){
+  :root{--bg:#f3f5f8; --panel:#fff; --panel2:#f0f3f7; --line:#d6dde6; --text:#1b2530; --mute:#5f7284;
+  --ok:#188a5b; --bad:#c9323f; --warn:#b97a0c; --acc:#1766c9; --ct:#7a3fb0; --tag:#9a6200; --hash:#12827a;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:650}
+header .sub{color:var(--mute);font-size:12.5px}
+header .sp{flex:1}
+main{padding:16px 20px;display:grid;gap:16px;grid-template-columns:minmax(300px,380px) 1fr;max-width:1800px;margin:auto}
+@media (max-width:980px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 10px;font-weight:650}
+label{display:block;font-size:12px;color:var(--mute);margin:8px 0 3px}
+select,input,textarea,button{font:inherit;color:inherit}
+select,input,textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+textarea{resize:vertical;min-height:54px}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 11px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button.danger:hover{background:var(--bad);color:#fff}
+button.good{border-color:var(--ok);color:var(--ok)}
+button.good:hover{background:var(--ok);color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.row>*{flex:0 0 auto}
+.who{display:flex;gap:6px;flex-wrap:wrap}
+.who label{margin:0;display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--text);font-size:13px}
+.who input{width:auto}
+.who label.sel{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 18%,var(--panel2))}
+.role{font-size:11px;color:var(--mute)}
+.banner{border-radius:8px;padding:10px 12px;margin-top:10px;font-weight:600;border:1px solid}
+.banner.ok{color:var(--ok);border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.banner.bad{color:var(--bad);border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,transparent)}
+.banner.warn{color:var(--warn);border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)}
+.banner small{display:block;font-weight:400;color:var(--text);opacity:.85;margin-top:2px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+.hint{color:var(--mute);font-size:12px;margin-top:6px}
+table{border-collapse:collapse;width:100%}
+.scroll{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+th,td{padding:6px 9px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:var(--panel2);font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;z-index:1}
+tr.bad td{background:color-mix(in srgb,var(--bad) 16%,transparent)}
+tr.bad td:first-child{box-shadow:inset 3px 0 var(--bad)}
+.hex{word-break:break-all;max-width:340px}
+.c-iv{color:var(--mute)} .c-ct{color:var(--ct)} .c-tag{color:var(--tag)} .c-prev{color:var(--hash)}
+.sev-WARN{color:var(--warn)} .sev-ERROR,.sev-CRITICAL{color:var(--bad)} .sev-DEBUG{color:var(--mute)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:8px}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;background:currentColor}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1250px){.two{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px}
+.kv div:nth-child(odd){color:var(--mute)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);color:var(--mute);margin:2px 4px 2px 0}
+.console{max-height:210px;overflow:auto;font-size:12px}
+.console div{padding:3px 0;border-bottom:1px dashed var(--line);display:flex;gap:8px}
+.console .c0{color:var(--ok)} .console .cx{color:var(--bad)} .console .cw{color:var(--warn)}
+.step{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.step .n{width:20px;height:20px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;color:var(--mute)}
+input[type=number]{width:64px}
+.search{display:flex;gap:8px;align-items:center;margin-top:8px}
+.search input{max-width:260px}
+mark{background:var(--warn);color:#000;border-radius:3px;padding:0 2px}
+</style>
+</head>
+<body>
+<header>
+  <h1>SecureLog demo</h1>
+  <span class="sub">AES-256-GCM · per-record forward-secure keys · SHA-256 chain · authenticated anchor · Zero Trust roles</span>
+  <span class="sp"></span>
+  <button id="resetBtn" class="danger">Reset demo</button>
+</header>
+
+<main>
+<div class="col">
+
+  <section>
+    <h2>1 · Who is acting?</h2>
+    <div class="who" id="who"></div>
+    <div class="hint">Every action below goes through the real <span class="mono">securelog</span> CLI as this user. Try the "wrong role" and "attacker" options to see Zero Trust refusals.</div>
+  </section>
+
+  <section>
+    <h2>2 · Write a log entry <span class="role">(logger only)</span></h2>
+    <label for="sev">Severity</label>
+    <select id="sev"><option>INFO</option><option>WARN</option><option>ERROR</option><option>CRITICAL</option><option>DEBUG</option></select>
+    <label for="msg">Event details (sensitive data on purpose)</label>
+    <textarea id="msg">password reset token=abc123 issued for jdoe</textarea>
+    <div class="row">
+      <button class="primary" id="logBtn">Encrypt &amp; append</button>
+      <button id="logManyBtn">Add 5 sample events</button>
+    </div>
+    <div id="logRes"></div>
+  </section>
+
+  <section>
+    <h2>3 · Check &amp; read</h2>
+    <div class="row">
+      <button id="verifyBtn">Verify integrity</button>
+      <button id="readBtn">Decrypt &amp; read</button>
+      <button id="rotateBtn">Rotate key <span class="role">(admin)</span></button>
+    </div>
+    <div id="verifyRes"></div>
+    <div class="hint">Read &amp; verify need the root key, which lives on separate "off-host" media (not with the log).</div>
+  </section>
+
+  <section>
+    <h2>4 · Attacker with disk access</h2>
+    <div class="hint" style="margin:0 0 6px">These edit the files on the logging host directly. Then press <b>Verify</b>.</div>
+    <div class="step"><span class="n">a</span>Target record <input type="number" id="rec" value="2" min="1"></div>
+    <div class="row">
+      <button class="danger" data-atk="flip">Flip ciphertext bit</button>
+      <button class="danger" data-atk="severity">Edit severity</button>
+      <button class="danger" data-atk="delete">Delete record</button>
+      <button class="danger" data-atk="swap">Swap with next</button>
+    </div>
+    <div class="step"><span class="n">b</span>Tail truncation</div>
+    <div class="row">
+      <button class="danger" data-atk="truncate">Cut last 3 records</button>
+      <button class="danger" data-atk="truncate_anchor">…and delete anchor</button>
+    </div>
+    <div class="step"><span class="n">c</span>Full rollback</div>
+    <div class="row">
+      <button id="backupBtn">1. Attacker backs up host</button>
+      <button class="danger" data-atk="rollback">3. Restore old backup</button>
+    </div>
+    <div class="hint">For (c): take the backup, keep logging, publish a checkpoint (panel 5), then restore the old backup. Local verify passes; the checkpoint exposes it.</div>
+    <div class="row"><button class="good" id="restoreBtn">Undo last attack</button></div>
+    <div id="atkRes"></div>
+  </section>
+
+  <section>
+    <h2>5 · Off-host checkpoints</h2>
+    <div class="row">
+      <button id="cpBtn">Publish checkpoint</button>
+      <button id="cpVerifyBtn">Verify against latest</button>
+    </div>
+    <div id="cpList" class="mono" style="margin-top:8px"></div>
+    <div id="cpRes"></div>
+  </section>
+
+</div>
+
+<div class="col">
+
+  <section>
+    <h2>What's actually on the logging host's disk (attacker's view)</h2>
+    <div class="legend">
+      <span class="c-iv">IV (random, unique)</span><span class="c-ct">ciphertext (the event, encrypted)</span>
+      <span class="c-tag">GCM auth tag</span><span class="c-prev">SHA-256 of previous record</span>
+    </div>
+    <div class="scroll"><table id="rawT"><thead><tr>
+      <th>#</th><th>time</th><th>sev</th><th>actor</th><th>key</th><th>IV</th><th>ciphertext</th><th>tag</th><th>prev hash</th>
+    </tr></thead><tbody></tbody></table></div>
+    <div class="search">
+      <span class="hint" style="margin:0">Search the raw file for:</span>
+      <input id="q" value="abc123" spellcheck="false">
+      <span id="qRes" class="mono"></span>
+    </div>
+    <div class="hint">Time, severity and actor are plaintext but are authenticated (GCM AAD): editing them breaks the tag. The message itself never appears.</div>
+  </section>
+
+  <section>
+    <h2>Decrypted view <span class="role">(auditor with root key, after verification)</span></h2>
+    <div id="readRes"><div class="hint">Choose <b>bob (auditor)</b> and press <b>Decrypt &amp; read</b>. A tampered log releases nothing.</div></div>
+    <div class="scroll" id="decWrap" style="display:none"><table id="decT"><thead><tr>
+      <th>#</th><th>time</th><th>sev</th><th>actor</th><th>message</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <div class="two">
+    <section>
+      <h2>Forward-secure key state</h2>
+      <div class="kv" id="keyKV"></div>
+      <div class="hint">After every record the host overwrites this chain key with HMAC(key,"next") and the old value is gone, so a thief of this file cannot decrypt or re-forge earlier records.</div>
+      <div id="files" style="margin-top:10px"></div>
+    </section>
+    <section>
+      <h2>Activity (real CLI calls &amp; exit codes)</h2>
+      <div class="console mono" id="console"></div>
+    </section>
+  </div>
+
+</div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let who = 'alice', badRecord = 0, lastRaw = [];
+const WHO = [
+  ['alice','alice','logger'], ['bob','bob','auditor'], ['root','root','admin'], ['mallory','mallory','attacker: wrong token']
+];
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+async function api(path, body){
+  const r = await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  return r.json();
+}
+function drawWho(){
+  $('#who').innerHTML = WHO.map(([id,n,r])=>`<label class="${id===who?'sel':''}"><input type="radio" name="w" value="${id}" ${id===who?'checked':''}>${n} <span class="role">${r}</span></label>`).join('');
+  document.querySelectorAll('#who input').forEach(i=>i.onchange=()=>{who=i.value;drawWho()});
+}
+function banner(el, res, okText){
+  let cls = 'ok', text = okText;
+  if(res.code!==0){
+    cls = res.code===6 ? 'bad' : 'warn';
+    text = (res.code===6?'⚠ ':'') + res.meaning;
+  }
+  const detail = res.code===0 ? (res.entries ? esc(res.entries.length+' records decrypted') : esc((res.stdout||'').trim().split('\n').pop())) : esc(res.stderr||'');
+  el.innerHTML = `<div class="banner ${cls}">${text}<small>${detail}</small></div>`;
+}
+function renderRaw(rows){
+  lastRaw = rows;
+  const tb = $('#rawT tbody');
+  tb.innerHTML = rows.map(r=>{
+    if(!r.ok) return `<tr class="${r.n===badRecord?'bad':''}"><td>${r.n}</td><td colspan="8" class="mono">⚠ malformed line: ${esc(r.raw)}</td></tr>`;
+    return `<tr class="${+r.seq===badRecord||r.n===badRecord?'bad':''}">
+      <td>${esc(r.seq)}</td><td class="mono">${esc(r.ts.replace('T',' ').replace('Z',''))}</td>
+      <td class="sev-${esc(r.sev)}">${esc(r.sev)}</td><td>${esc(r.actor)}</td><td>${esc(r.key_id)}</td>
+      <td class="mono hex c-iv">${esc(r.iv)}</td><td class="mono hex c-ct">${esc(r.ct)}</td>
+      <td class="mono hex c-tag">${esc(r.tag)}</td><td class="mono hex c-prev">${esc(r.prev.slice(0,16))}…</td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="hint">No records yet.</td></tr>';
+  search();
+}
+function search(){
+  const q = $('#q').value.trim();
+  if(!q){ $('#qRes').textContent=''; return; }
+  const blob = lastRaw.map(r=>r.ok?[r.ts,r.sev,r.actor,r.iv,r.ct,r.tag,r.prev].join('|'):r.raw).join('\n');
+  const n = blob.split(q).length-1;
+  $('#qRes').innerHTML = n===0 ? `<span style="color:var(--ok)">0 matches: plaintext not visible</span>` : `<span style="color:var(--bad)">${n} match(es)</span>`;
+}
+function renderState(s){
+  const st = s.state;
+  $('#keyKV').innerHTML = st ? `
+    <div>next record #</div><div class="mono">${esc(st.next_seq)}</div>
+    <div>key epoch</div><div class="mono">${esc(st.key_id)}</div>
+    <div>current chain key</div><div class="mono" style="word-break:break-all">${esc(st.chain_key.slice(0,24))}…</div>
+    <div>anchor (seq:hash:mac)</div><div class="mono" style="word-break:break-all">${esc(s.anchor? s.anchor.split(':').map((x,i)=>i===0?x:x.slice(0,10)+'…').join(':') : '(missing)')}</div>`
+    : '<div>state</div><div>missing</div>';
+  $('#files').innerHTML = `<div class="hint" style="margin:0 0 4px">Logging host holds:</div>${s.host_files.map(f=>`<span class="pill">${esc(f)}</span>`).join('')}
+    <div class="hint" style="margin:6px 0 4px">Off-host media holds:</div>${s.offhost_files.map(f=>`<span class="pill">${esc(f)}</span>`).join('')}<span class="pill">checkpoints (below)</span>`;
+  $('#cpList').innerHTML = s.checkpoints.length ? s.checkpoints.map(c=>esc(c.slice(0,6)+'…'+c.slice(-8))+' <span class="hint">(seq '+esc(c.split(':')[0])+')</span>').join('<br>') : '<span class="hint">none yet</span>';
+  $('#console').innerHTML = s.console.slice().reverse().map(c=>{
+    const k = c.code===0?'c0':(c.code===6?'cx':'cw');
+    return `<div class="${k}"><span>${esc(c.as||'')}</span><span>${esc(c.cmd.split(' ')[0])}</span><span>exit ${c.code}</span><span style="color:var(--mute)">${esc(c.msg||c.meaning)}</span></div>`;
+  }).join('');
+}
+async function refresh(){
+  const d = await api('/api/raw');
+  renderRaw(d.rows); renderState(d);
+}
+function parseBad(res){
+  const m = /record (\d+)/.exec(res.stderr||'');
+  badRecord = (res.code===6 && m) ? +m[1] : 0;
+}
+
+$('#logBtn').onclick = async ()=>{
+  const r = await api('/api/log',{user:who,severity:$('#sev').value,message:$('#msg').value});
+  banner($('#logRes'), r, 'Encrypted and appended'); badRecord=0; refresh();
+};
+$('#logManyBtn').onclick = async ()=>{
+  const ev=[['INFO','user=jdoe logged in from 10.0.0.7'],['WARN','password reset token=abc123 issued'],['ERROR','payment gateway timeout card=****4242'],['INFO','backup completed'],['CRITICAL','root login attempt blocked']];
+  let last; for(const [s,m] of ev) last = await api('/api/log',{user:who,severity:s,message:m});
+  banner($('#logRes'), last, 'Added 5 events'); badRecord=0; refresh();
+};
+$('#verifyBtn').onclick = async ()=>{
+  const r = await api('/api/verify',{user:who});
+  parseBad(r); banner($('#verifyRes'), r, '✓ Log verified'); await refresh();
+};
+$('#readBtn').onclick = async ()=>{
+  const r = await api('/api/read',{user:who});
+  parseBad(r);
+  banner($('#readRes'), r, '✓ Verified, decrypted');
+  const w=$('#decWrap');
+  if(r.code===0){
+    w.style.display='block';
+    $('#decT tbody').innerHTML = r.entries.map(e=>`<tr><td>${esc(e.seq)}</td><td class="mono">${esc(e.ts.replace('T',' ').replace('Z',''))}</td><td class="sev-${esc(e.sev)}">${esc(e.sev)}</td><td>${esc(e.actor)}</td><td class="mono">${esc(e.msg)}</td></tr>`).join('');
+  } else { w.style.display='none'; }
+  await refresh();
+};
+$('#rotateBtn').onclick = async ()=>{
+  const r = await api('/api/rotate',{user:who}); banner($('#verifyRes'), r, 'Key rotated: new epoch'); refresh();
+};
+document.querySelectorAll('[data-atk]').forEach(b=>b.onclick=async ()=>{
+  const r = await api('/api/attack',{kind:b.dataset.atk, record:+$('#rec').value});
+  $('#atkRes').innerHTML = `<div class="banner ${r.ok?'warn':'bad'}">${r.ok?'Attack applied':'Not applied'}<small>${esc(r.msg||'')}</small></div>`;
+  $('#verifyRes').innerHTML=''; badRecord=0; refresh();
+});
+$('#backupBtn').onclick = async ()=>{
+  const r = await api('/api/backup',{}); $('#atkRes').innerHTML=`<div class="banner warn">Backup taken<small>${esc(r.msg)}</small></div>`; refresh();
+};
+$('#restoreBtn').onclick = async ()=>{
+  const r = await api('/api/restore',{}); $('#atkRes').innerHTML=`<div class="banner ${r.ok?'ok':'bad'}">${esc(r.msg)}</div>`;
+  $('#verifyRes').innerHTML=''; badRecord=0; refresh();
+};
+$('#cpBtn').onclick = async ()=>{
+  const r = await api('/api/checkpoint',{user:who}); banner($('#cpRes'), r, 'Checkpoint published off-host'); refresh();
+};
+$('#cpVerifyBtn').onclick = async ()=>{
+  const s = await api('/api/state');
+  if(!s.checkpoints.length){ $('#cpRes').innerHTML='<div class="banner warn">Publish a checkpoint first</div>'; return; }
+  const r = await api('/api/verify',{user:who, expect:s.checkpoints[s.checkpoints.length-1]});
+  parseBad(r); banner($('#cpRes'), r, '✓ Log matches the off-host checkpoint'); refresh();
+};
+$('#resetBtn').onclick = async ()=>{
+  if(!confirm('Reset the demo store?')) return;
+  await api('/api/reset',{}); ['#logRes','#verifyRes','#atkRes','#cpRes'].forEach(s=>$(s).innerHTML='');
+  $('#decWrap').style.display='none'; badRecord=0; refresh();
+};
+$('#q').oninput = search;
+drawWho(); refresh();
+</script>
+</body>
+</html>
